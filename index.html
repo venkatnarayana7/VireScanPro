@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en" class="light">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VeriScan Pro | Forensic Text Analysis</title>
-    <meta name="description" content="VeriScan Pro - Advanced Forensic Text Analysis, Plagiarism Detection, and AI Content Verification.">
+    <meta name="description"
+        content="VeriScan Pro - Advanced Forensic Text Analysis, Plagiarism Detection, and AI Content Verification.">
 
     <!-- ❌ REMOVED Tailwind CDN -->
     <!-- ❌ REMOVED inline tailwind.config script -->
@@ -14,23 +16,63 @@
 
     <!-- Your custom styles stay untouched -->
     <style>
-        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s ease; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .dark ::-webkit-scrollbar-thumb { background: #475569; }
-        mark { transition: all 0.2s ease; }
-        mark:hover { filter: brightness(0.9); }
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+
+        mark {
+            transition: all 0.2s ease;
+        }
+
+        mark:hover {
+            filter: brightness(0.9);
+        }
     </style>
 
     <!-- Import map untouched -->
-   
+
     <!-- ✅ Local Tailwind build -->
-    
+
+    <script>
+        window.onerror = function (message, source, lineno, colno, error) {
+            const errorContainer = document.createElement('div');
+            errorContainer.style.position = 'fixed';
+            errorContainer.style.top = '0';
+            errorContainer.style.left = '0';
+            errorContainer.style.width = '100%';
+            errorContainer.style.backgroundColor = 'red';
+            errorContainer.style.color = 'white';
+            errorContainer.style.padding = '20px';
+            errorContainer.style.zIndex = '9999';
+            errorContainer.innerHTML = '<h3>Global Error:</h3><pre>' + message + '\n' + source + ':' + lineno + '</pre>';
+            document.body.appendChild(errorContainer);
+        };
+        // Polyfill process for libs that might need it
+        window.process = { env: { NODE_ENV: 'production' } };
+    </script>
 </head>
 
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>
