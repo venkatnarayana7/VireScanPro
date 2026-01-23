@@ -12,7 +12,8 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "@google/genai": "^1.38.0",
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^17.2.3",
     "firebase": "^12.8.0",
     "lucide-react": "^0.563.0",
     "react": "^19.2.3",

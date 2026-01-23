@@ -1,15 +1,20 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AnalysisResult } from "../types";
 
 export class PlagiarismService {
   constructor() {
-    // We instantiate GoogleGenAI inside methods to ensure it uses the most up-to-date API key.
+    // Instantiation happens in methods
   }
 
   async analyzeText(text: string): Promise<AnalysisResult> {
-    // Fix: Create a new GoogleGenAI instance right before making an API call as per guidelines.
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey.includes("PLACEHOLDER")) {
+      throw new Error("Gemini API Key is not set. Please check your .env.local file.");
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    // Use standard 1.5-flash model which is stable on free tier
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
       Perform a forensic writing audit at the level of Grammarly and Turnitin.
@@ -23,7 +28,8 @@ export class PlagiarismService {
       
       Text: "${text}"
 
-      Respond ONLY in JSON:
+      Respond ONLY in JSON. Do not use markdown backticks.
+      Structure:
       {
         "similarityScore": number,
         "originalityScore": number,
@@ -45,75 +51,21 @@ export class PlagiarismService {
     `;
 
     try {
-      if (!process.env.API_KEY || process.env.API_KEY.includes("PLACEHOLDER")) {
-        throw new Error("Gemini API Key is not set. Please check your .env.local file.");
-      }
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const textResponse = response.text();
 
-      const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: prompt,
-        config: {
-          // tools: [{ googleSearch: {} }], // Removed to fix 404 on free tier
-          responseMimeType: "application/json",
-          temperature: 0,
-          // Fixed: recommended to provide responseSchema when using application/json
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              similarityScore: { type: Type.NUMBER },
-              originalityScore: { type: Type.NUMBER },
-              aiScore: { type: Type.NUMBER },
-              writingScores: {
-                type: Type.OBJECT,
-                properties: {
-                  plagiarism: { type: Type.BOOLEAN },
-                  spelling: { type: Type.NUMBER },
-                  conciseness: { type: Type.NUMBER },
-                  wordChoice: { type: Type.NUMBER },
-                  grammar: { type: Type.NUMBER },
-                  punctuation: { type: Type.NUMBER },
-                  readability: { type: Type.BOOLEAN },
-                  additional: { type: Type.NUMBER }
-                }
-              },
-              highlights: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    text: { type: Type.STRING },
-                    sourceUrl: { type: Type.STRING },
-                    confidence: { type: Type.NUMBER }
-                  }
-                }
-              },
-              writingFeedback: {
-                type: Type.OBJECT,
-                properties: {
-                  grammar: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  tone: { type: Type.STRING },
-                  readability: { type: Type.STRING },
-                  aiMarkers: { type: Type.ARRAY, items: { type: Type.STRING } }
-                }
-              },
-              summary: { type: Type.STRING }
-            }
-          }
-        },
-      });
+      // Clean up markdown if present (SDK sometimes includes it)
+      const jsonStr = textResponse.replace(/^```json\s*/, "").replace(/\s*```$/, "");
 
-      // Fixed: Using .text property directly
-      const rawResult = JSON.parse(response.text || '{}');
-      const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks
-        ?.filter(chunk => chunk.web)
-        .map(chunk => ({
-          title: chunk.web?.title || 'External Source',
-          uri: chunk.web?.uri || '',
-        })) || [];
+      const rawResult = JSON.parse(jsonStr || '{}');
+
+      // Note: Standard SDK does not support Search Grounding on free tier easily, so passing empty sources for now.
+      // If paid key logic is needed, we would add the tool here.
 
       return {
         ...rawResult,
-        sources,
+        sources: [], // Search removed to ensure free tier compatibility
         wordCount: text.split(/\s+/).filter(Boolean).length
       };
     } catch (error: any) {
@@ -123,37 +75,26 @@ export class PlagiarismService {
   }
 
   async rewriteToOriginal(text: string): Promise<string> {
-    // Fix: Create a new GoogleGenAI instance right before making an API call.
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey.includes("PLACEHOLDER")) {
+      throw new Error("Gemini API Key is not set.");
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
-      Act as a Human Linguistic Master. Rewrite the input text to bypass ALL AI and Plagiarism detectors (Grammarly, Turnitin, Copyleaks).
-
-      TECHNIQUE: "Syntactic Shifting"
-      - Change the voice (Active vs Passive) frequently.
-      - Break up predictable rhythms.
-      - Use rare but contextually perfect synonyms.
-      - Flip the order of information in sentences.
-      - Inject human-specific nuance (idioms, varied sentence lengths).
-      - Ensure NO 3-word sequence remains identical to the original if it was plagiarized.
-
+      Act as a Human Linguistic Master. Rewrite the input text to bypass ALL AI and Plagiarism detectors.
+      
       Original: "${text}"
 
       Provide ONLY the rewritten text.
     `;
 
     try {
-      if (!process.env.API_KEY || process.env.API_KEY.includes("PLACEHOLDER")) {
-        throw new Error("Gemini API Key is not set.");
-      }
-
-      const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: prompt,
-        config: { temperature: 0.9 },
-      });
-      // Fixed: Using .text property directly
-      return response.text || '';
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      return response.text() || '';
     } catch (error: any) {
       throw new Error(error.message || "Rewrite failed. Please check connection.");
     }
