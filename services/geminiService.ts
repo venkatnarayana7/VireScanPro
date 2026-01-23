@@ -14,19 +14,30 @@ export class PlagiarismService {
       // We defer error throwing to methods to avoid crash on load
     }
 
-    // Allow 'dangerouslyAllowBrowser' because this is a client-side demo app structure
-    this.groq = new Groq({
-      apiKey: apiKey,
-      dangerouslyAllowBrowser: true
-    });
+    if (apiKey && !apiKey.includes("PLACEHOLDER")) {
+      try {
+        // Allow 'dangerouslyAllowBrowser' because this is a client-side demo app structure
+        this.groq = new Groq({
+          apiKey: apiKey,
+          dangerouslyAllowBrowser: true
+        });
+      } catch (e) {
+        console.warn("Groq Init deferred:", e);
+      }
+    } else {
+      // Init with dummy to prevent null access, or handle in methods (methods already handle re-init)
+      console.warn("Groq Key missing on load. Service will initialize later.");
+    }
   }
 
   async analyzeText(text: string): Promise<AnalysisResult> {
     const apiKey = process.env.GROQ_API_KEY || process.env.API_KEY || process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("API Key is missing. Please add GROQ_API_KEY to .env.local");
 
-    // Re-init to ensure latest key is used if changed at runtime
-    this.groq = new Groq({ apiKey, dangerouslyAllowBrowser: true });
+    // Re-init if missing or to ensure latest key
+    if (!this.groq || (apiKey && !apiKey.includes("PLACEHOLDER"))) {
+      if (!apiKey) throw new Error("API Key is missing. Please add GROQ_API_KEY to .env.local");
+      this.groq = new Groq({ apiKey, dangerouslyAllowBrowser: true });
+    }
 
     const prompt = `
       Perform a forensic writing audit at the level of Grammarly and Turnitin.
