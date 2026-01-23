@@ -50,7 +50,7 @@ export class PlagiarismService {
       }
 
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-pro",
+        model: "gemini-1.5-flash-001",
         contents: prompt,
         config: {
           tools: [{ googleSearch: {} }],
@@ -148,7 +148,7 @@ export class PlagiarismService {
       }
 
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-pro",
+        model: "gemini-1.5-pro-001",
         contents: prompt,
         config: { temperature: 0.9 },
       });
