@@ -13,7 +13,7 @@ export class PlagiarismService {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `
       Perform a forensic writing audit at the level of Grammarly and Turnitin.
