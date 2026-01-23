@@ -1,24 +1,24 @@
 
 import { initializeApp, getApps } from "firebase/app";
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged 
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
 } from "firebase/auth";
-import { 
-  getFirestore, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  orderBy, 
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
   deleteDoc,
-  serverTimestamp 
+  serverTimestamp
 } from "firebase/firestore";
 import { User, ForensicHistoryItem } from '../types';
 
@@ -48,7 +48,7 @@ const mockDb = {
   users: JSON.parse(localStorage.getItem('veriscan_users_v7') || '{}'),
   sessions: JSON.parse(localStorage.getItem('veriscan_session_v7') || 'null'),
   history: JSON.parse(localStorage.getItem('veriscan_history_v7') || '{}'),
-  
+
   save: () => {
     localStorage.setItem('veriscan_users_v7', JSON.stringify(mockDb.users));
     localStorage.setItem('veriscan_session_v7', JSON.stringify(mockDb.sessions));
@@ -74,7 +74,7 @@ try {
 
 export const storageService = {
   isLocalMode: () => !useFirebase,
-  
+
   getProviderName: () => useFirebase ? "Cloud Infrastructure" : "Local Forensic Core",
 
   switchToLocal: () => {
@@ -111,23 +111,23 @@ export const storageService = {
       });
     } else {
       setTimeout(() => callback(mockDb.sessions), 50);
-      return () => {};
+      return () => { };
     }
   },
 
   signup: async (name: string, email: string, pass: string): Promise<User> => {
     const userId = `local_${Math.random().toString(36).substr(2, 9)}`;
     const localUser: User = { id: userId, name, email, tier: 'free', createdAt: new Date().toISOString() };
-    
+
     if (useFirebase && auth) {
       try {
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
-        const newUser: User = { 
-          id: cred.user.uid, 
-          name, 
-          email, 
-          tier: 'free', 
-          createdAt: new Date().toISOString() 
+        const newUser: User = {
+          id: cred.user.uid,
+          name,
+          email,
+          tier: 'free',
+          createdAt: new Date().toISOString()
         };
         await setDoc(doc(db, "users", cred.user.uid), newUser);
         mockDb.users[email] = { ...newUser, password: pass };
@@ -155,13 +155,13 @@ export const storageService = {
         const cred = await signInWithEmailAndPassword(auth, email, pass);
         const userDoc = await getDoc(doc(db, "users", cred.user.uid));
         if (userDoc.exists()) return userDoc.data() as User;
-        
-        return { 
-          id: cred.user.uid, 
-          email: cred.user.email || '', 
-          name: 'Operative', 
-          tier: 'free', 
-          createdAt: new Date().toISOString() 
+
+        return {
+          id: cred.user.uid,
+          email: cred.user.email || '',
+          name: 'Operative',
+          tier: 'free',
+          createdAt: new Date().toISOString()
         };
       } catch (err: any) {
         const localUser = mockDb.users[email];
@@ -190,7 +190,7 @@ export const storageService = {
 
   logout: async () => {
     if (useFirebase && auth) {
-      await signOut(auth).catch(() => {});
+      await signOut(auth).catch(() => { });
     }
     mockDb.sessions = null;
     mockDb.save();
@@ -222,7 +222,7 @@ export const storageService = {
         console.warn("Cloud save failed.");
       }
     }
-    
+
     const newItem = { ...item, id: `hist_${Math.random().toString(36).substr(2, 9)}` };
     if (!mockDb.history[userId]) mockDb.history[userId] = [];
     mockDb.history[userId].push(newItem);
@@ -234,9 +234,9 @@ export const storageService = {
     if (useFirebase && db) {
       try {
         await deleteDoc(doc(db, "users", userId, "history", itemId));
-      } catch (err) {}
+      } catch (err) { }
     }
-    
+
     if (mockDb.history[userId]) {
       mockDb.history[userId] = mockDb.history[userId].filter((i: any) => i.id !== itemId);
       mockDb.save();
