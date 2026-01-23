@@ -13,8 +13,7 @@ export class PlagiarismService {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Use standard 1.5-flash model which is stable on free tier
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
     const prompt = `
       Perform a forensic writing audit at the level of Grammarly and Turnitin.
@@ -81,7 +80,7 @@ export class PlagiarismService {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `
       Act as a Human Linguistic Master. Rewrite the input text to bypass ALL AI and Plagiarism detectors.
