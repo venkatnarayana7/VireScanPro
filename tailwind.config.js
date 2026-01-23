@@ -1,13 +1,19 @@
+/** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
-    "./App.tsx",
     "./index.tsx",
+    "./App.tsx",
     "./components/**/*.{ts,tsx}",
     "./services/**/*.{ts,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 }
