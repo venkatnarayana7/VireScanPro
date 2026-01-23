@@ -45,8 +45,12 @@ export class PlagiarismService {
     `;
 
     try {
+      if (!process.env.API_KEY || process.env.API_KEY.includes("PLACEHOLDER")) {
+        throw new Error("Gemini API Key is not set. Please check your .env.local file.");
+      }
+
       const response = await ai.models.generateContent({
-        model: "gemini-3-pro-preview", 
+        model: "gemini-1.5-pro",
         contents: prompt,
         config: {
           tools: [{ googleSearch: {} }],
@@ -112,9 +116,9 @@ export class PlagiarismService {
         sources,
         wordCount: text.split(/\s+/).filter(Boolean).length
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Forensic Audit Error:", error);
-      throw new Error("Analysis failed. Text may be too short or invalid.");
+      throw new Error(error.message || "Analysis failed. Text may be too short or invalid.");
     }
   }
 
@@ -139,15 +143,19 @@ export class PlagiarismService {
     `;
 
     try {
+      if (!process.env.API_KEY || process.env.API_KEY.includes("PLACEHOLDER")) {
+        throw new Error("Gemini API Key is not set.");
+      }
+
       const response = await ai.models.generateContent({
-        model: "gemini-3-pro-preview",
+        model: "gemini-1.5-pro",
         contents: prompt,
         config: { temperature: 0.9 },
       });
       // Fixed: Using .text property directly
       return response.text || '';
-    } catch (error) {
-      throw new Error("Rewrite failed. Please check connection.");
+    } catch (error: any) {
+      throw new Error(error.message || "Rewrite failed. Please check connection.");
     }
   }
 }
