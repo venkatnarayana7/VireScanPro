@@ -1,19 +1,32 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { AnalysisResult } from "../types";
 
 export class PlagiarismService {
+  private groq: Groq;
+
   constructor() {
-    // Instantiation happens in methods
+    // Initialize Groq client
+    // Note: In Vite/Client-side, we must be careful with env vars. 
+    // Ideally this runs server-side, but adhering to existing architecture:
+    const apiKey = process.env.GROQ_API_KEY || process.env.API_KEY || process.env.GEMINI_API_KEY;
+
+    if (!apiKey || apiKey.includes("PLACEHOLDER")) {
+      // We defer error throwing to methods to avoid crash on load
+    }
+
+    // Allow 'dangerouslyAllowBrowser' because this is a client-side demo app structure
+    this.groq = new Groq({
+      apiKey: apiKey,
+      dangerouslyAllowBrowser: true
+    });
   }
 
   async analyzeText(text: string): Promise<AnalysisResult> {
-    const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey.includes("PLACEHOLDER")) {
-      throw new Error("Gemini API Key is not set. Please check your .env.local file.");
-    }
+    const apiKey = process.env.GROQ_API_KEY || process.env.API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("API Key is missing. Please add GROQ_API_KEY to .env.local");
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    // Re-init to ensure latest key is used if changed at runtime
+    this.groq = new Groq({ apiKey, dangerouslyAllowBrowser: true });
 
     const prompt = `
       Perform a forensic writing audit at the level of Grammarly and Turnitin.
@@ -27,7 +40,7 @@ export class PlagiarismService {
       
       Text: "${text}"
 
-      Respond ONLY in JSON. Do not use markdown backticks.
+      Respond ONLY in VALID JSON.
       Structure:
       {
         "similarityScore": number,
@@ -50,52 +63,49 @@ export class PlagiarismService {
     `;
 
     try {
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const textResponse = response.text();
+      const completion = await this.groq.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        model: "llama-3.3-70b-versatile",
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+      });
 
-      // Clean up markdown if present (SDK sometimes includes it)
-      const jsonStr = textResponse.replace(/^```json\s*/, "").replace(/\s*```$/, "");
-
-      const rawResult = JSON.parse(jsonStr || '{}');
-
-      // Note: Standard SDK does not support Search Grounding on free tier easily, so passing empty sources for now.
-      // If paid key logic is needed, we would add the tool here.
+      const responseContent = completion.choices[0]?.message?.content || '{}';
+      const rawResult = JSON.parse(responseContent);
 
       return {
         ...rawResult,
-        sources: [], // Search removed to ensure free tier compatibility
+        sources: [], // Groq/Llama3 doesn't have web search grounding
         wordCount: text.split(/\s+/).filter(Boolean).length
       };
     } catch (error: any) {
       console.error("Forensic Audit Error:", error);
-      throw new Error(error.message || "Analysis failed. Text may be too short or invalid.");
+      throw new Error(error.message || "Groq Analysis failed.");
     }
   }
 
   async rewriteToOriginal(text: string): Promise<string> {
-    const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey.includes("PLACEHOLDER")) {
-      throw new Error("Gemini API Key is not set.");
-    }
+    const apiKey = process.env.GROQ_API_KEY || process.env.API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("API Key is missing.");
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    this.groq = new Groq({ apiKey, dangerouslyAllowBrowser: true });
 
     const prompt = `
       Act as a Human Linguistic Master. Rewrite the input text to bypass ALL AI and Plagiarism detectors.
-      
       Original: "${text}"
-
       Provide ONLY the rewritten text.
     `;
 
     try {
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      return response.text() || '';
+      const completion = await this.groq.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.7,
+      });
+
+      return completion.choices[0]?.message?.content || '';
     } catch (error: any) {
-      throw new Error(error.message || "Rewrite failed. Please check connection.");
+      throw new Error(error.message || "Groq Rewrite failed.");
     }
   }
 }
