@@ -176,7 +176,7 @@ export const storageService = {
           storageService.switchToLocal();
           return storageService.login(email, pass);
         }
-        throw { code: 'auth/invalid-credential' };
+        throw err; // RE-THROW ACTUAL ERROR
       }
     } else {
       const user = mockDb.users[email];
