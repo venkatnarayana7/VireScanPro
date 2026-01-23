@@ -153,8 +153,17 @@ export const storageService = {
     if (useFirebase && auth) {
       try {
         const cred = await signInWithEmailAndPassword(auth, email, pass);
-        const userDoc = await getDoc(doc(db, "users", cred.user.uid));
-        if (userDoc.exists()) return userDoc.data() as User;
+        let firestoreData = null;
+        try {
+          const userDoc = await getDoc(doc(db, "users", cred.user.uid));
+          if (userDoc.exists()) {
+            firestoreData = userDoc.data();
+          }
+        } catch (dbErr) {
+          console.warn("VeriScan Warning: Cloud fetch failed (offline/missing db), using auth defaults.");
+        }
+
+        if (firestoreData) return firestoreData as User;
 
         return {
           id: cred.user.uid,
