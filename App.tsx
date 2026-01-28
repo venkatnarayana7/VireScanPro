@@ -811,7 +811,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
         <button
           onClick={onEditorClick}
           className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em] ${status !== AnalysisStatus.COMPLETED && !hasRewriteResult
-            ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm'
+            ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm'
             : 'text-slate-500'
             }`}
         >
@@ -821,7 +821,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           <button
             onClick={onForensicsClick}
             className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em] ${status === AnalysisStatus.COMPLETED
-              ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm'
+              ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm'
               : 'text-slate-500'
               }`}
           >
@@ -829,7 +829,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           </button>
         )}
         {hasRewriteResult && (
-          <button className="px-6 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em] bg-white dark:bg-slate-700 text-indigo-600 shadow-sm">
+          <button className="px-6 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em] bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm">
             Humanized
           </button>
         )}
