@@ -1,20 +1,12 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# VeriScan Pro
+**Forensic Text Analysis & AI Detection System**
 
-# Run and deploy your AI Studio app
+## Current Status
+- **Version**: 4.0 (Ghost Protocol v7)
+- **Deployment**: Automatic via GitHub Actions
+- **URL**: [https://venkatnarayana7.github.io/VireScanPro/](https://venkatnarayana7.github.io/VireScanPro/)
 
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/drive/1tcvz20tIwbT_Rpa6HhpHQVgT42IPhayw
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Instructions
+1.  **Anti-Detection**: Use "Academic Mode" for research papers (Grammarly Bypass) and "Aggressive Mode" for GPTZero bypass.
+2.  **Hosting**: This project builds automatically on push to `main`.
+    - Ensure Secrets `GEMINI_API_KEY` and `GROQ_API_KEY` are set in GitHub Settings.
