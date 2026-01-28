@@ -41,9 +41,9 @@ export class PlagiarismService {
    */
   private getApiKey(): string | null {
     const keys = [
-      process.env.GROQ_API_KEY,
-      process.env.API_KEY,
-      process.env.GEMINI_API_KEY,
+      import.meta.env.VITE_GROQ_API_KEY,
+      import.meta.env.VITE_API_KEY,
+      import.meta.env.VITE_GEMINI_API_KEY,
     ];
 
     for (const key of keys) {
