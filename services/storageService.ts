@@ -60,8 +60,10 @@ let useFirebase = false;
 let auth: any = null;
 let db: any = null;
 
+const forceLocal = localStorage.getItem('veriscan_force_local') === 'true';
+
 try {
-  if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("REPLACE")) {
+  if (!forceLocal && firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("REPLACE")) {
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
     auth = getAuth(app);
     db = getFirestore(app);
@@ -79,9 +81,30 @@ export const storageService = {
 
   switchToLocal: () => {
     console.log("🛠️ Forensic Core: Force Diverting to Local Engine");
+    localStorage.setItem('veriscan_force_local', 'true');
     useFirebase = false;
     auth = null;
     db = null;
+    // Force reload to apply clean state if needed, or just let app handle it.
+    // App uses isLocalMode() which checks useFirebase.
+  },
+
+  getCurrentUser: async (): Promise<User | null> => {
+    // FAST PATH: Check local mirror instantly
+    if (mockDb.sessions && typeof mockDb.sessions === 'object') {
+      return mockDb.sessions as User;
+    }
+
+    return new Promise((resolve) => {
+      const unsubscribe = storageService.subscribeToAuth((user) => {
+        resolve(user);
+        unsubscribe();
+      });
+    });
+  },
+
+  onAuthStateChanged: (callback: (user: User | null) => void) => {
+    return storageService.subscribeToAuth(callback);
   },
 
   subscribeToAuth: (callback: (user: User | null) => void) => {
@@ -91,7 +114,11 @@ export const storageService = {
           try {
             const userDoc = await getDoc(doc(db, "users", fbUser.uid));
             if (userDoc.exists()) {
-              callback(userDoc.data() as User);
+              const userData = userDoc.data() as User;
+              // Sync cloud session to local mirror
+              mockDb.sessions = userData;
+              mockDb.save();
+              callback(userData);
             } else {
               const defaultUser: User = {
                 id: fbUser.uid,
@@ -163,15 +190,19 @@ export const storageService = {
           console.warn("VeriScan Warning: Cloud fetch failed (offline/missing db), using auth defaults.");
         }
 
-        if (firestoreData) return firestoreData as User;
-
-        return {
+        const userToReturn = (firestoreData || {
           id: cred.user.uid,
           email: cred.user.email || '',
           name: 'Operative',
           tier: 'free',
           createdAt: new Date().toISOString()
-        };
+        }) as User;
+
+        // Dual Persistence: Save to local mirror for robustness
+        mockDb.sessions = userToReturn;
+        mockDb.save();
+
+        return userToReturn;
       } catch (err: any) {
         const localUser = mockDb.users[email];
         if (localUser && localUser.password === pass) {
@@ -181,7 +212,7 @@ export const storageService = {
           return safeUser as User;
         }
 
-        if (err.code === 'auth/configuration-not-found') {
+        if (err.code === 'auth/configuration-not-found' || err.code === 'auth/network-request-failed' || err.code === 'auth/internal-error') {
           storageService.switchToLocal();
           return storageService.login(email, pass);
         }

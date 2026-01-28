@@ -15,7 +15,7 @@ const WritingReport: React.FC<WritingReportProps> = ({ scores, isDark }) => {
     { label: 'Spelling', value: scores.spelling, isBinary: false },
     { label: 'Punctuation', value: scores.punctuation, isBinary: false },
     { label: 'Conciseness', value: scores.conciseness, isBinary: false },
-    { label: 'Readability', value: scores.readability, isBinary: true },
+    { label: 'Readability', value: scores.readability, isBinary: false },
     { label: 'Word choice', value: scores.wordChoice, isBinary: false },
     { label: 'Additional issues', value: scores.additional, isBinary: false },
   ];

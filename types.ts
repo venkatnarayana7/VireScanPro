@@ -28,7 +28,7 @@ export interface WritingIssueCounts {
   wordChoice: number;
   grammar: number;
   punctuation: number;
-  readability: boolean;
+  readability: number;
   additional: number;
 }
 
@@ -54,6 +54,7 @@ export interface ForensicHistoryItem {
   timestamp: string;
   text: string;
   result: AnalysisResult;
+  hash?: string; // SHA-512 Integrity Hash
 }
 
 export enum AnalysisStatus {
@@ -61,4 +62,20 @@ export enum AnalysisStatus {
   SCANNING = 'SCANNING',
   COMPLETED = 'COMPLETED',
   ERROR = 'ERROR'
+}
+
+export enum HumanizationMode {
+  NATURAL = "Natural",
+  ACADEMIC = "Academic",
+  AGGRESSIVE = "Aggressive",
+  CREATIVE = "Creative"
+}
+
+export interface RewriteResult {
+  humanizedText: string;
+  originalAiProbability: number;
+  newAiProbability: number;
+  readabilityScore: number;
+  keyChanges: string[];
+  toneAnalysis: string;
 }
