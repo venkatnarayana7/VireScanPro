@@ -30,13 +30,13 @@ import { User, ForensicHistoryItem } from '../types';
  * You can find this in Firebase Console > Project Settings > General.
  */
 const firebaseConfig = {
-  apiKey: "AIzaSyA0kA5Xji13UUM-LTDAsNFsBKeQXWrxLss",
-  authDomain: "webreact-f970a.firebaseapp.com",
-  projectId: "webreact-f970a",
-  storageBucket: "webreact-f970a.firebasestorage.app",
-  messagingSenderId: "417589616982",
-  appId: "1:417589616982:web:1f857790697219511f36f7",
-  measurementId: "G-TSW1767CG9"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 /**
