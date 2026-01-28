@@ -7,17 +7,16 @@ import {
 } from "../types";
 
 // ==========================================
-// 1. INDUSTRY-GRADE TYPES (Runtime Safety)
+// 1. ROBUST TYPES (Prevents Crashes)
 // ==========================================
 
 export enum HumanizationMode {
-  NATURAL = "NATURAL",       // Coffee shop talk, minor imperfections
-  ACADEMIC = "ACADEMIC",     // Dense, nominalizations, passive voice
-  AGGRESSIVE = "AGGRESSIVE", // Maximum burstiness, fragmented syntax (Hard to detect)
-  STORYTELLER = "STORYTELLER" // High sensory detail, emotional logic
+  ACADEMIC = "ACADEMIC",       // Research papers (Clean but complex)
+  ANTI_GRAMMARLY = "ANTI_GRAMMARLY", // "Dumb" mode (Undetectable but messy)
+  STORYTELLER = "STORYTELLER", // Creative writing
+  NATURAL = "NATURAL"          // Standard conversational
 }
 
-// Define the allowed values clearly with a fallback mechanism
 const IssueType = z.enum([
   "AI_PATTERN",
   "REPETITION",
@@ -28,22 +27,23 @@ const IssueType = z.enum([
   "READABILITY"
 ]);
 
-// Validation Schema: Guarantees the AI returns exactly what we need
+// Flexible Schema: Handles AI hallucinations gracefully
 const AnalysisSchema = z.object({
-  similarityScore: z.number().min(0).max(100).describe("0-100 score of text that matches web sources"),
-  aiProbability: z.number().min(0).max(100).describe("0-100 probability text is AI generated"),
-  readabilityScore: z.number().min(0).max(100).describe("Flesch-Kincaid score"),
+  similarityScore: z.number().min(0).max(100),
+  aiProbability: z.number().min(0).max(100),
+  readabilityScore: z.number().min(0).max(100),
   writingQuality: z.object({
-    sentenceVariance: z.number().describe("Score of how varied sentence lengths are"),
-    emotionalResonance: z.number().describe("Score of emotional language usage"),
-    grammar: z.number().describe("Grammar correctness score"),
+    sentenceVariance: z.number(),
+    academicTone: z.number().optional(),
+    grammar: z.number(),
+    emotionalResonance: z.number().optional().default(50), // Fallback for legacy
   }),
   flags: z.array(z.object({
     text: z.string(),
     issue: IssueType.catch("AI_PATTERN"), // Safety catch: improperly flagged issues default to AI_PATTERN instead of crashing
     fix: z.string()
   })),
-  strategicAdvice: z.string().describe("High-level advice to improve the text"),
+  strategicAdvice: z.string()
 });
 
 const RewriteSchema = z.object({
@@ -51,24 +51,24 @@ const RewriteSchema = z.object({
   stats: z.object({
     originalAiScore: z.number(),
     predictedNewAiScore: z.number(),
-    burstinessScore: z.number().describe("Measure of sentence length variance (0-100)"),
+    complexityScore: z.number().describe("Depth of vocabulary and syntax"),
   }),
-  changesMade: z.array(z.string()).describe("List of specific tactics used (e.g., 'Added sensory detail')"),
+  changesMade: z.array(z.string())
 });
 
-export type NewAnalysisResult = z.infer<typeof AnalysisSchema>;
 export type NewRewriteResult = z.infer<typeof RewriteSchema>;
+export type NewAnalysisResult = z.infer<typeof AnalysisSchema>;
 
 // ==========================================
-// 2. THE HARDCORE SERVICE CLASS
+// 2. THE SERVICE
 // ==========================================
 
 export class TextIntelligenceService {
   private groq: Groq | null = null;
-  private readonly MODEL = "llama-3.3-70b-versatile"; // Best balance of IQ vs Speed
+  private readonly MODEL = "llama-3.3-70b-versatile";
   private readonly MAX_RETRIES = 3;
 
-  constructor(private readonly config: { apiKey?: string; debug?: boolean } = {}) { }
+  constructor(private readonly config: { apiKey?: string } = {}) { }
 
   /**
    * Main Entry: Analyze text for AI patterns and quality
@@ -81,7 +81,7 @@ export class TextIntelligenceService {
       Your job is to detect "AI-Likeness" based on two metrics:
       1. PERPLEXITY: How predictable is the word choice? (Low = AI, High = Human)
       2. BURSTINESS: How varied is the sentence structure? (Uniform = AI, Chaotic = Human)
-      
+
       CRITICAL: Do not be polite. Be clinically accurate.
     `;
 
@@ -90,15 +90,15 @@ export class TextIntelligenceService {
       <text_analysis>
       ${this.escapeText(text)}
       </text_analysis>
-      
+
       Return JSON adhering to this schema:
       {
         "similarityScore": 0-100,
         "aiProbability": 0-100,
         "readabilityScore": 0-100,
-        "writingQuality": { "sentenceVariance": 0-100, "emotionalResonance": 0-100, "grammar": 0-100 },
+        "writingQuality": { "sentenceVariance": 0-100, "grammar": 0-100, "emotionalResonance": 0-100 },
         "flags": [{ "text": "substring", "issue": "AI_PATTERN", "fix": "suggestion" }],
-        "strategicAdvice": "current critique"
+        "strategicAdvice": "critique"
       }
     `;
 
@@ -106,40 +106,38 @@ export class TextIntelligenceService {
   }
 
   /**
-   * Main Entry: Rewrite text to bypass detection WITHOUT looking illiterate
+   * Universal Humanizer: Handles both "Smart" and "Dumb" modes
    */
   async humanize(text: string, mode: HumanizationMode): Promise<NewRewriteResult> {
     this.validateInput(text);
 
-    // Dynamic temperature: Higher for aggressive modes to force randomness
-    const temperature = mode === HumanizationMode.AGGRESSIVE ? 0.95 : 0.75;
+    // Temperature Control:
+    // Academic needs typically lower temp (0.7) to stay coherent.
+    // Anti-Grammarly needs higher temp (0.9) to generate "noise".
+    const temperature = mode === HumanizationMode.ACADEMIC ? 0.7 : 0.9;
 
     const systemPrompt = `
-      You are "Ghostwriter V9", an elite adversarial engine designed to defeat AI detection (GPTZero, Originality.ai).
-      
-      *** THE STRATEGY ***
-      AI detectors look for "Symmetry" and "Predictability". 
-      To defeat them, you must use **"Cognitive Asymmetry"**:
-      
-      1. **BURSTINESS RULE**: You must mix extremely short sentences (2-5 words) with extremely long, complex sentences (40+ words). Never write three sentences of similar length in a row.
-      2. **VOCABULARY RULE**: Do NOT use "Thesaurus salad" (big words for no reason). Instead, use *idioms* and *phrasal verbs* (e.g., "count on", "run into") which AI avoids.
-      3. **STRUCTURAL RULE**: Break the "Topic Sentence -> Evidence -> Conclusion" loop. Dive straight into the action/point. 
-      4. **ANTI-HALLUCINATION**: Do not invent facts. Keep the core meaning, change the *delivery*.
-      
+      You are "Core_v9", an elite linguistic engine.
+      Your goal is to rewrite the input text based on the TARGET MODE.
+
       ${this.getModeInstructions(mode)}
+
+      GENERAL RULES:
+      1. Do not hallucinate facts. Keep the meaning 100% identical.
+      2. Do not add fake URLs or citations.
     `;
 
     const userPrompt = `
-      Re-write the following text to bypass AI detection.
+      Rewrite this text:
       <input_text>
       ${this.escapeText(text)}
       </input_text>
 
-      Return JSON:
+      Return strictly valid JSON:
       {
-        "humanizedText": "The rewritten text...",
-        "stats": { "originalAiScore": number, "predictedNewAiScore": number, "burstinessScore": number },
-        "changesMade": ["list of 3 key tactics used"]
+        "humanizedText": "string",
+        "stats": { "originalAiScore": 0-100, "predictedNewAiScore": 0-100, "complexityScore": 0-100 },
+        "changesMade": ["string", "string"]
       }
     `;
 
@@ -147,124 +145,121 @@ export class TextIntelligenceService {
   }
 
   // ==========================================
-  // 3. ROBUST EXECUTION ENGINE (Retries + Validation)
+  // 3. THE "MAGIC" PROMPT LOGIC
   // ==========================================
 
-  private async executeLlmRequest<T>(
-    sysPrompt: string,
-    usrPrompt: string,
-    schema: z.ZodSchema<T>,
-    temp: number
-  ): Promise<T> {
+  private getModeInstructions(mode: HumanizationMode): string {
+    const modes = {
+      // ---------------------------------------------------------
+      // OPTION A: RESEARCH PAPERS (High Quality, Low Detection)
+      // ---------------------------------------------------------
+      [HumanizationMode.ACADEMIC]: `
+        TARGET MODE: ACADEMIC (The "Professor" Method)
+
+        **Objective**: Pass AI detection by increasing LINGUISTIC DENSITY, not by making errors.
+
+        1. **SYNTACTIC COMPLEXITY (The "Clause" Rule)**:
+           - AI writes simple sentences: "The study showed X. This means Y."
+           - You write complex sentences: "While the study initially suggested X, closer inspection reveals Y, notwithstanding the outliers."
+           - Use subordinating conjunctions: *Whereas, Insofar as, Albeit, Given that*.
+
+        2. **VOCABULARY DEPTH (Tier 3)**:
+           - Use specific, high-level vocabulary.
+           - Instead of "show", use "elucidate" or "underscore".
+           - Instead of "change", use "fluctuation" or "paradigm shift".
+
+        3. **NOMINALIZATIONS**:
+           - Turn verbs into nouns. This is a hallmark of academic writing.
+           - "We analyzed the data" -> "The analysis of the data was conducted..."
+
+        4. **HEDGING**:
+           - Never be 100% sure. AI is always sure.
+           - Use: "It is plausible that," "The data suggests," "One might argue."
+      `,
+
+      // ---------------------------------------------------------
+      // OPTION B: ANTI-GRAMMARLY (Nuclear Option)
+      // ---------------------------------------------------------
+      [HumanizationMode.ANTI_GRAMMARLY]: `
+        TARGET MODE: ANTI_GRAMMARLY (The "Human Flaw" Method)
+
+        **Objective**: Defeat Grammarly/GPTZero by violating optimization rules.
+
+        1. **PASSIVE VOICE**: Force passive voice. "The error was made by the system" (Grammarly hates this, which is good).
+        2. **FILLER WORDS**: Add "meaningless" texture. "Basically," " In a sense," "Sort of."
+        3. **DUMMY SUBJECTS**: Start sentences with "There is," "It is."
+        4. **SENTENCE FRAGMENTS**: Occasionally use a fragment for emphasis. "Not really." "Just like that."
+        5. **WEAK ADJECTIVES**: Use "Good," "Bad," "Big" instead of optimized words.
+      `,
+
+      [HumanizationMode.NATURAL]: `
+        TARGET MODE: NATURAL. Conversational, blogging style. Use contractions and idioms.
+      `,
+
+      [HumanizationMode.STORYTELLER]: `
+        TARGET MODE: STORYTELLER. Focus on sensory details (sight, sound, texture). Use metaphors.
+      `
+    };
+
+    return modes[mode] || modes[HumanizationMode.NATURAL];
+  }
+
+  // ==========================================
+  // 4. EXECUTION UTILS
+  // ==========================================
+
+  private async executeLlmRequest<T>(sys: string, usr: string, schema: z.ZodSchema<T>, temp: number): Promise<T> {
     const groq = this.ensureGroq();
-    let lastError: unknown;
+    let lastErr;
 
     for (let i = 0; i < this.MAX_RETRIES; i++) {
       try {
-        const response = await groq.chat.completions.create({
-          messages: [
-            { role: "system", content: sysPrompt },
-            { role: "user", content: usrPrompt }
-          ],
+        const res = await groq.chat.completions.create({
+          messages: [{ role: "system", content: sys }, { role: "user", content: usr }],
           model: this.MODEL,
           response_format: { type: "json_object" },
           temperature: temp,
         });
 
-        const rawContent = response.choices[0]?.message?.content;
+        const rawContent = res.choices[0]?.message?.content;
         if (!rawContent) throw new Error("Empty response from LLM");
 
-        // CLEANING: Llama sometimes wraps JSON in markdown blocks or adds trailing text
-        const cleanJson = this.sanitizeJson(rawContent);
-        const parsed = JSON.parse(cleanJson);
-
-        // VALIDATION: Zod ensures the structure is 100% correct
-        return schema.parse(parsed);
-
-      } catch (err) {
-        lastError = err;
-        if (this.config.debug) console.warn(`Attempt ${i + 1} failed:`, err);
-        // Exponential backoff: 500ms, 1000ms, 2000ms
-        await new Promise(r => setTimeout(r, 500 * Math.pow(2, i)));
+        const content = this.cleanJson(rawContent);
+        return schema.parse(JSON.parse(content));
+      } catch (e) {
+        lastErr = e;
+        if (i < this.MAX_RETRIES - 1) {
+          await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i))); // Backoff
+        }
       }
     }
-
-    throw new Error(`Service Failure: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+    throw new Error(`LLM Failed after ${this.MAX_RETRIES} attempts: ${lastErr}`);
   }
 
-  // ==========================================
-  // 4. UTILITIES & PROMPT LOGIC
-  // ==========================================
-
-  private getModeInstructions(mode: HumanizationMode): string {
-    const modes = {
-      [HumanizationMode.NATURAL]: `
-        MODE: NATURAL (The "Coffee Shop" Method)
-        - Use contractions (don't, can't, it's).
-        - Use em-dashes (—) to interrupt your own thoughts.
-        - Start sentences with conjunctions (But, And, So).
-        - Goal: Sound like a smart friend explaining a concept, not a textbook.
-      `,
-      [HumanizationMode.ACADEMIC]: `
-        MODE: ACADEMIC (The "Ivy League" Method)
-        - AI writes "simple". You must write "dense".
-        - Use nominalizations (Turn verbs into nouns: "decided" -> "reached a decision").
-        - Use passive voice intentionally to shift focus.
-        - Use hedging words: "ostensibly", "arguably", "to some extent".
-      `,
-      [HumanizationMode.AGGRESSIVE]: `
-        MODE: AGGRESSIVE (The "Journalist" Method)
-        - HIGH VARIANCE REQUIRED.
-        - Use rhetorical questions followed immediately by answers.
-        - Use fragments for impact. "Not now. Not ever."
-        - Eliminate all "fluff" words (Moreover, Furthermore, Additionally).
-      `,
-      [HumanizationMode.STORYTELLER]: `
-        MODE: STORYTELLER
-        - Focus on sensory details (sight, sound, texture).
-        - Use metaphors instead of literal descriptions.
-        - Example: Instead of "It was hard", write "It felt like wading through cement."
-      `
-    };
-    return modes[mode] || modes[HumanizationMode.NATURAL];
-  }
-
-  private sanitizeJson(input: string): string {
-    // Removes Markdown code blocks (```json ... ```)
-    let cleaned = input.replace(/```json/g, "").replace(/```/g, "");
-    // Removes potential trailing text after the JSON object closes
-    const lastBrace = cleaned.lastIndexOf("}");
-    if (lastBrace !== -1) cleaned = cleaned.substring(0, lastBrace + 1);
-    return cleaned.trim();
-  }
-
-  private escapeText(text: string): string {
-    return text.replace(/"/g, '\\"').replace(/\n/g, "\\n");
+  private cleanJson(str: string): string {
+    return str.replace(/^```json\s*/, "").replace(/\s*```$/, "").replace(/,(\s*[}\]])/g, '$1').trim();
   }
 
   private ensureGroq(): Groq {
     if (this.groq) return this.groq;
-    // Safe environment variable access
-    let key: string | undefined;
 
-    // Check Vite Env first
-    if (import.meta.env.VITE_GROQ_API_KEY) key = import.meta.env.VITE_GROQ_API_KEY;
-    else if (import.meta.env.VITE_API_KEY) key = import.meta.env.VITE_API_KEY;
-    else if (import.meta.env.VITE_GEMINI_API_KEY) key = import.meta.env.VITE_GEMINI_API_KEY;
+    // Use environment variables (Vite standard)
+    const key = this.config.apiKey ||
+      import.meta.env.VITE_GROQ_API_KEY ||
+      import.meta.env.VITE_API_KEY ||
+      import.meta.env.VITE_GEMINI_API_KEY;
 
-    // Config fallback
-    if (!key && this.config.apiKey) key = this.config.apiKey;
-
-    if (!key) throw new Error("Groq API Key missing. Please configure VITE_GROQ_API_KEY.");
-
+    if (!key) throw new Error("No API Key configured. Please check VITE_GROQ_API_KEY.");
     this.groq = new Groq({ apiKey: key, dangerouslyAllowBrowser: true });
     return this.groq;
   }
 
   private validateInput(text: string) {
-    if (!text || text.trim().length < 10) {
-      throw new Error("Input text is too short to analyze/rewrite (min 10 chars).");
-    }
+    if (!text || text.trim().length < 10) throw new Error("Text too short");
+  }
+
+  private escapeText(text: string): string {
+    return text.replace(/"/g, '\\"').replace(/\n/g, "\\n");
   }
 }
 
@@ -289,7 +284,7 @@ export class PlagiarismService {
       originalityScore: 100 - raw.similarityScore,
       aiScore: raw.aiProbability,
       wordCount: wordCount,
-      sources: [], // No fake sources
+      sources: [],
       highlights: raw.flags.map(f => ({
         text: f.text,
         sourceUrl: f.issue, // Map Issue Type to "SourceUrl" label for UI compatibility
@@ -303,13 +298,13 @@ export class PlagiarismService {
       },
       writingScores: {
         plagiarism: raw.similarityScore > 15,
-        spelling: raw.writingQuality.grammar, // Proxy
-        conciseness: 80, // Default good
-        wordChoice: raw.writingQuality.sentenceVariance, // Proxy
+        spelling: raw.writingQuality.grammar,
+        conciseness: 80,
+        wordChoice: raw.writingQuality.sentenceVariance,
         grammar: raw.writingQuality.grammar,
         punctuation: raw.writingQuality.grammar,
         readability: raw.readabilityScore,
-        additional: raw.writingQuality.emotionalResonance
+        additional: raw.writingQuality.emotionalResonance || 85
       },
       summary: raw.strategicAdvice
     };
@@ -319,7 +314,7 @@ export class PlagiarismService {
     // Map Legacy Mode -> New Mode
     let newMode = HumanizationMode.NATURAL;
     if (mode === LegacyHumanizationMode.ACADEMIC) newMode = HumanizationMode.ACADEMIC;
-    if (mode === LegacyHumanizationMode.AGGRESSIVE) newMode = HumanizationMode.AGGRESSIVE;
+    if (mode === LegacyHumanizationMode.AGGRESSIVE) newMode = HumanizationMode.ANTI_GRAMMARLY; // Aggressive maps to Anti-Grammarly
     if (mode.toString() === 'Creative' || mode.toString() === 'Storyteller') newMode = HumanizationMode.STORYTELLER;
 
     const raw = await this.engine.humanize(text, newMode);
@@ -328,9 +323,9 @@ export class PlagiarismService {
       humanizedText: raw.humanizedText,
       originalAiProbability: raw.stats.originalAiScore,
       newAiProbability: raw.stats.predictedNewAiScore,
-      readabilityScore: 60, // Default or calc
+      readabilityScore: raw.stats.complexityScore, // Map complexity to readability slot
       keyChanges: raw.changesMade,
-      toneAnalysis: `Burstiness Score: ${raw.stats.burstinessScore}/100`
+      toneAnalysis: `Vocabulary Depth: ${raw.stats.complexityScore}/100`
     };
   }
 }
