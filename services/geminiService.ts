@@ -17,6 +17,17 @@ export enum HumanizationMode {
   STORYTELLER = "STORYTELLER" // High sensory detail, emotional logic
 }
 
+// Define the allowed values clearly with a fallback mechanism
+const IssueType = z.enum([
+  "AI_PATTERN",
+  "REPETITION",
+  "CLICHE",
+  "LOGIC_FLAW",
+  "GRAMMAR",
+  "SPELLING",
+  "READABILITY"
+]);
+
 // Validation Schema: Guarantees the AI returns exactly what we need
 const AnalysisSchema = z.object({
   similarityScore: z.number().min(0).max(100).describe("0-100 score of text that matches web sources"),
@@ -29,7 +40,7 @@ const AnalysisSchema = z.object({
   }),
   flags: z.array(z.object({
     text: z.string(),
-    issue: z.string(), // Relaxed from strict enum to prevent AI "hallucination" crashes
+    issue: IssueType.catch("AI_PATTERN"), // Safety catch: improperly flagged issues default to AI_PATTERN instead of crashing
     fix: z.string()
   })),
   strategicAdvice: z.string().describe("High-level advice to improve the text"),
