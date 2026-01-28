@@ -144,6 +144,29 @@ export class TextIntelligenceService {
     return this.executeLlmRequest(systemPrompt, userPrompt, RewriteSchema, temperature);
   }
 
+  /**
+   * The "Nuclear" Workflow for stubborn text
+   */
+  async hardHumanize(text: string): Promise<NewRewriteResult> {
+    // Pass 1: Break the AI structure completely (Chaos Method)
+    const pass1 = await this.humanize(text, HumanizationMode.ANTI_GRAMMARLY);
+
+    // Pass 2: Smooth it out just enough to be readable, but lock the structure
+    // We feed the output of Pass 1 into Pass 2
+    const pass2 = await this.humanize(pass1.humanizedText, HumanizationMode.NATURAL);
+
+    return {
+      ...pass2,
+      changesMade: [...pass1.changesMade, ...pass2.changesMade],
+      stats: {
+        ...pass2.stats,
+        // Show the user the drastic change
+        originalAiScore: pass1.stats.originalAiScore,
+        predictedNewAiScore: pass2.stats.predictedNewAiScore
+      }
+    };
+  }
+
   // ==========================================
   // 3. THE "MAGIC" PROMPT LOGIC
   // ==========================================
@@ -155,23 +178,23 @@ export class TextIntelligenceService {
       // ---------------------------------------------------------
       [HumanizationMode.ACADEMIC]: `
         TARGET MODE: ACADEMIC (The "Professor" Method)
-
+        
         **Objective**: Pass AI detection by increasing LINGUISTIC DENSITY, not by making errors.
-
+        
         1. **SYNTACTIC COMPLEXITY (The "Clause" Rule)**:
            - AI writes simple sentences: "The study showed X. This means Y."
            - You write complex sentences: "While the study initially suggested X, closer inspection reveals Y, notwithstanding the outliers."
            - Use subordinating conjunctions: *Whereas, Insofar as, Albeit, Given that*.
-
+           
         2. **VOCABULARY DEPTH (Tier 3)**:
            - Use specific, high-level vocabulary.
            - Instead of "show", use "elucidate" or "underscore".
            - Instead of "change", use "fluctuation" or "paradigm shift".
-
+           
         3. **NOMINALIZATIONS**:
            - Turn verbs into nouns. This is a hallmark of academic writing.
            - "We analyzed the data" -> "The analysis of the data was conducted..."
-
+           
         4. **HEDGING**:
            - Never be 100% sure. AI is always sure.
            - Use: "It is plausible that," "The data suggests," "One might argue."
@@ -181,15 +204,35 @@ export class TextIntelligenceService {
       // OPTION B: ANTI-GRAMMARLY (Nuclear Option)
       // ---------------------------------------------------------
       [HumanizationMode.ANTI_GRAMMARLY]: `
-        TARGET MODE: ANTI_GRAMMARLY (The "Human Flaw" Method)
+        TARGET MODE: ANTI-GRAMMARLY_V2 (The "Chaos" Method)
+        
+        **Objective**: Destroy the "Logic Chain" that Grammarly detects.
+        
+        1. **THE "DISCONNECT" RULE (Crucial)**:
+           - AI connects every sentence logically ("Therefore", "As a result").
+           - **YOU MUST**: Remove logical connectors. Jump between thoughts abruptly.
+           - *Bad (AI)*: "The server crashed, therefore users were disconnected."
+           - *Good (Human)*: "The server crashed. Users got disconnected." (No bridge).
 
-        **Objective**: Defeat Grammarly/GPTZero by violating optimization rules.
+        2. **THE "AFTERTHOUGHT" TACTIC**:
+           - Add a short clause at the END of a sentence that feels like an afterthought.
+           - *Example*: "...which was the whole point, honestly."
+           - *Example*: "...at least for now."
 
-        1. **PASSIVE VOICE**: Force passive voice. "The error was made by the system" (Grammarly hates this, which is good).
-        2. **FILLER WORDS**: Add "meaningless" texture. "Basically," " In a sense," "Sort of."
-        3. **DUMMY SUBJECTS**: Start sentences with "There is," "It is."
-        4. **SENTENCE FRAGMENTS**: Occasionally use a fragment for emphasis. "Not really." "Just like that."
-        5. **WEAK ADJECTIVES**: Use "Good," "Bad," "Big" instead of optimized words.
+        3. **VARIABLE SUBJECT STARTING**:
+           - Never start three sentences in a row with "The" or "It".
+           - Start with a Preposition: "In the middle of the process..."
+           - Start with a Verb (Gerund): "Running the script again revealed..."
+
+        4. **INTENTIONAL VAGUENESS**:
+           - AI is precise. Humans are vague.
+           - specific numbers ("42%") -> vague quantifiers ("almost half").
+           - specific dates -> "a few days ago".
+           
+        5. **IDIOMATIC PHRASING**:
+           - Use "Run into" instead of "Encounter".
+           - Use "Figure out" instead of "Determine".
+           - Use "Iron out" instead of "Resolve".
       `,
 
       [HumanizationMode.NATURAL]: `
@@ -284,7 +327,7 @@ export class PlagiarismService {
       originalityScore: 100 - raw.similarityScore,
       aiScore: raw.aiProbability,
       wordCount: wordCount,
-      sources: [],
+      sources: [], // No fake sources
       highlights: raw.flags.map(f => ({
         text: f.text,
         sourceUrl: f.issue, // Map Issue Type to "SourceUrl" label for UI compatibility
@@ -298,13 +341,13 @@ export class PlagiarismService {
       },
       writingScores: {
         plagiarism: raw.similarityScore > 15,
-        spelling: raw.writingQuality.grammar,
-        conciseness: 80,
-        wordChoice: raw.writingQuality.sentenceVariance,
+        spelling: raw.writingQuality.grammar, // Proxy
+        conciseness: 80, // Default good
+        wordChoice: raw.writingQuality.sentenceVariance, // Proxy
         grammar: raw.writingQuality.grammar,
         punctuation: raw.writingQuality.grammar,
         readability: raw.readabilityScore,
-        additional: raw.writingQuality.emotionalResonance || 85
+        additional: raw.writingQuality.emotionalResonance
       },
       summary: raw.strategicAdvice
     };
@@ -312,9 +355,22 @@ export class PlagiarismService {
 
   async rewriteToOriginal(text: string, mode: LegacyHumanizationMode): Promise<LegacyRewriteResult> {
     // Map Legacy Mode -> New Mode
+
+    // NUCLEAR OPTION: If user selects AGGRESSIVE, we now use the 2-Pass hardHumanize workflow
+    if (mode === LegacyHumanizationMode.AGGRESSIVE) {
+      const raw = await this.engine.hardHumanize(text);
+      return {
+        humanizedText: raw.humanizedText,
+        originalAiProbability: raw.stats.originalAiScore,
+        newAiProbability: raw.stats.predictedNewAiScore,
+        readabilityScore: raw.stats.complexityScore,
+        keyChanges: raw.changesMade,
+        toneAnalysis: `System 2 Applied: ${raw.stats.complexityScore}/100` // Visual indicator
+      };
+    }
+
     let newMode = HumanizationMode.NATURAL;
     if (mode === LegacyHumanizationMode.ACADEMIC) newMode = HumanizationMode.ACADEMIC;
-    if (mode === LegacyHumanizationMode.AGGRESSIVE) newMode = HumanizationMode.ANTI_GRAMMARLY; // Aggressive maps to Anti-Grammarly
     if (mode.toString() === 'Creative' || mode.toString() === 'Storyteller') newMode = HumanizationMode.STORYTELLER;
 
     const raw = await this.engine.humanize(text, newMode);
@@ -323,7 +379,7 @@ export class PlagiarismService {
       humanizedText: raw.humanizedText,
       originalAiProbability: raw.stats.originalAiScore,
       newAiProbability: raw.stats.predictedNewAiScore,
-      readabilityScore: raw.stats.complexityScore, // Map complexity to readability slot
+      readabilityScore: raw.stats.complexityScore,
       keyChanges: raw.changesMade,
       toneAnalysis: `Vocabulary Depth: ${raw.stats.complexityScore}/100`
     };
