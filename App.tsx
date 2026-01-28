@@ -731,7 +731,7 @@ const EditorSection: React.FC<EditorSectionProps> = ({
 }) => {
   return (
     <div className={`flex flex-col gap-6 transition-all duration-500 ${mainColumnSpan}`}>
-      <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[70vh]">
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] lg:rounded-[3rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[60vh] lg:min-h-[70vh]">
         {/* Tabs */}
         <EditorTabs
           status={status}
@@ -743,7 +743,7 @@ const EditorSection: React.FC<EditorSectionProps> = ({
         />
 
         {/* Content Area */}
-        <div className="flex-1 relative overflow-auto p-12">
+        <div className="flex-1 relative overflow-auto p-6 lg:p-12">
           {status === AnalysisStatus.COMPLETED ? (
             <div className="prose prose-slate dark:prose-invert max-w-none text-slate-700 dark:text-slate-300">
               {onRenderHighlightedText()}
@@ -754,7 +754,7 @@ const EditorSection: React.FC<EditorSectionProps> = ({
             </div>
           ) : (
             <textarea
-              className="w-full h-full resize-none border-none focus:ring-0 text-xl text-slate-800 dark:text-slate-100 leading-relaxed bg-transparent font-medium"
+              className="w-full h-full resize-none border-none focus:ring-0 text-base lg:text-xl text-slate-800 dark:text-slate-100 leading-relaxed bg-transparent font-medium"
               placeholder="Paste manuscript for forensic audit..."
               value={inputText}
               onChange={(e) => onInputChange(e.target.value)}
@@ -778,7 +778,7 @@ const EditorSection: React.FC<EditorSectionProps> = ({
       </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 text-red-700 dark:text-red-400 px-8 py-5 rounded-[2rem] flex items-center gap-3 animate-in slide-in-from-bottom-4">
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 text-red-700 dark:text-red-400 px-6 lg:px-8 py-4 lg:py-5 rounded-[2rem] flex items-center gap-3 animate-in slide-in-from-bottom-4">
           <AlertTriangle size={18} />
           <span className="text-xs font-bold uppercase tracking-wide">{error}</span>
         </div>
@@ -806,11 +806,11 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
   onClear,
 }) => {
   return (
-    <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/30 dark:bg-slate-900/50">
-      <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl">
+    <div className="px-5 py-4 lg:px-8 lg:py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/30 dark:bg-slate-900/50">
+      <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl overflow-x-auto no-scrollbar max-w-[70vw]">
         <button
           onClick={onEditorClick}
-          className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em] ${status !== AnalysisStatus.COMPLETED && !hasRewriteResult
+          className={`px-4 lg:px-6 py-2 rounded-xl text-[9px] lg:text-[10px] font-black transition-all uppercase tracking-[0.2em] whitespace-nowrap ${status !== AnalysisStatus.COMPLETED && !hasRewriteResult
             ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm'
             : 'text-slate-500'
             }`}
@@ -820,7 +820,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
         {hasResult && (
           <button
             onClick={onForensicsClick}
-            className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em] ${status === AnalysisStatus.COMPLETED
+            className={`px-4 lg:px-6 py-2 rounded-xl text-[9px] lg:text-[10px] font-black transition-all uppercase tracking-[0.2em] whitespace-nowrap ${status === AnalysisStatus.COMPLETED
               ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm'
               : 'text-slate-500'
               }`}
@@ -829,14 +829,14 @@ const EditorTabs: React.FC<EditorTabsProps> = ({
           </button>
         )}
         {hasRewriteResult && (
-          <button className="px-6 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em] bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm">
+          <button className="px-4 lg:px-6 py-2 rounded-xl text-[9px] lg:text-[10px] font-black transition-all uppercase tracking-[0.2em] whitespace-nowrap bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm">
             Humanized
           </button>
         )}
       </div>
       <button
         onClick={onClear}
-        className="p-2.5 text-slate-400 hover:text-red-500 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors"
+        className="p-2.5 text-slate-400 hover:text-red-500 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors flex-shrink-0 ml-2"
       >
         <Trash2 size={18} />
       </button>
@@ -865,7 +865,7 @@ const EditorFooter: React.FC<EditorFooterProps> = ({
   onDiscardRewrite,
 }) => {
   return (
-    <div className="px-10 py-8 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-6 justify-between items-center bg-slate-50/20 dark:bg-slate-900/20">
+    <div className="px-6 py-6 lg:px-10 lg:py-8 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-6 justify-between items-center bg-slate-50/20 dark:bg-slate-900/20">
       <div className="flex items-center gap-8 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
         <div className="flex items-center gap-2.5">
           <Type size={16} className="text-indigo-500" /> {wordCount} Words
@@ -1102,12 +1102,12 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
     <>
       {result && <WritingReport scores={result.writingScores} isDark={isDarkMode} />}
 
-      <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl border border-slate-200 dark:border-slate-800 p-10 flex flex-col gap-8">
-        <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-3">
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] lg:rounded-[3rem] shadow-xl border border-slate-200 dark:border-slate-800 p-6 lg:p-10 flex flex-col gap-6 lg:gap-8">
+        <h3 className="text-[10px] lg:text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-3">
           <LayoutDashboard size={16} className="text-indigo-500" /> Forensic
           Metrics
         </h3>
-        <div className="grid grid-cols-2 gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-10">
           <Gauge
             value={result?.originalityScore ?? 0}
             label="Originality"
@@ -1160,14 +1160,14 @@ const NeuralVerdictPanel: React.FC<NeuralVerdictPanelProps> = ({
     result.similarityScore > 5 || result.writingScores.conciseness > 0;
 
   return (
-    <div className="bg-gradient-to-br from-indigo-700 to-violet-950 text-white rounded-[3rem] p-12 relative overflow-hidden group shadow-2xl">
+    <div className="bg-gradient-to-br from-indigo-700 to-violet-950 text-white rounded-[2rem] lg:rounded-[3rem] p-8 lg:p-12 relative overflow-hidden group shadow-2xl">
       <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-20 transition-opacity pointer-events-none" />
       <Zap size={100} className="absolute -right-5 -top-5 opacity-10" />
       <div className="relative z-10">
-        <h3 className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
+        <h3 className="text-[9px] lg:text-[10px] font-black text-indigo-300 uppercase tracking-[0.3em] mb-6 lg:mb-8 flex items-center gap-2">
           <Sparkles size={14} className="animate-pulse" /> Neural Verdict
         </h3>
-        <p className="text-xl font-bold italic mb-10 leading-relaxed opacity-95">
+        <p className="text-lg lg:text-xl font-bold italic mb-8 lg:mb-10 leading-relaxed opacity-95">
           "{result.summary}"
         </p>
         {showRewriteOption && (
