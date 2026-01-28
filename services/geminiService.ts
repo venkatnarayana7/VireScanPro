@@ -111,17 +111,19 @@ export class TextIntelligenceService {
   async humanize(text: string, mode: HumanizationMode): Promise<NewRewriteResult> {
     this.validateInput(text);
 
-    // Temperature Control:
+    // Temperature Control: 
+    // NUCLEAR mode needs High Temperature (Randomness) + Low Top_P (Focus) implied by model defaults
+    const isNuclear = mode === HumanizationMode.NUCLEAR;
     // Academic needs typically lower temp (0.7) to stay coherent.
     // Anti-Grammarly needs higher temp (0.9) to generate "noise".
-    const temperature = mode === HumanizationMode.ACADEMIC ? 0.7 : 0.9;
+    const temperature = isNuclear ? 1.0 : (mode === HumanizationMode.ACADEMIC ? 0.7 : 0.9);
 
     const systemPrompt = `
       You are "Core_v9", an elite linguistic engine.
       Your goal is to rewrite the input text based on the TARGET MODE.
-
+      
       ${this.getModeInstructions(mode)}
-
+      
       GENERAL RULES:
       1. Do not hallucinate facts. Keep the meaning 100% identical.
       2. Do not add fake URLs or citations.
@@ -165,6 +167,28 @@ export class TextIntelligenceService {
         predictedNewAiScore: pass2.stats.predictedNewAiScore
       }
     };
+  }
+
+  /**
+   * The "Iterative Refinement" Pattern
+   */
+  async smartHumanize(rawText: string): Promise<NewRewriteResult> {
+    // 1. First, analyze to see WHERE it is failing
+    const analysis = await this.analyze(rawText);
+
+    // 2. Choose mode based on the current score
+    let mode = HumanizationMode.NATURAL;
+
+    if (analysis.aiProbability > 80) {
+      // If it's glaringly AI, use the Nuclear option
+      mode = HumanizationMode.NUCLEAR;
+    } else if (analysis.aiProbability > 40) {
+      // If it's unsure, use the Academic/Natural mix
+      mode = HumanizationMode.ACADEMIC;
+    }
+
+    // 3. Execute ONE strong pass
+    return this.humanize(rawText, mode);
   }
 
   // ==========================================
@@ -233,6 +257,31 @@ export class TextIntelligenceService {
            - Use "Run into" instead of "Encounter".
            - Use "Figure out" instead of "Determine".
            - Use "Iron out" instead of "Resolve".
+      `,
+
+      // ---------------------------------------------------------
+      // OPTION C: NUCLEAR (The "Subjective Bridge")
+      // ---------------------------------------------------------
+      [HumanizationMode.NUCLEAR]: `
+        TARGET MODE: NUCLEAR (Opinionated Editorial)
+      
+        *** STRATEGY: THE "SUBJECTIVE BRIDGE" ***
+        AI is objective. Humans are subjective.
+        You must rewrite the input by injecting a "Subjective Opinion" into every paragraph.
+        
+        *** FEW-SHOT EXAMPLES (MIMIC THIS STYLE) ***
+        
+        [Input (AI)]: "The software update improves security. It creates a firewall."
+        [Output (Human)]: "Honestly, the update is a pain, but it locks things down. Think of it like a firewall, basically."
+        
+        [Input (AI)]: "Climate change is a significant challenge requiring global cooperation."
+        [Output (Human)]: "We are looking at a mess with the climate. It's going to take everyone working together to even put a dent in it."
+        
+        *** MANDATORY RULES ***
+        1. **NO TRANSITIONS**: Banned words: "Moreover", "Furthermore", "In conclusion", "Additionally".
+        2. **START WITH VERBS**: Try starting sentences with -ing words. "Running the data showed..."
+        3. **USE CONTRACTIONS**: Always use "It's", "We're", "Don't".
+        4. **BREAK THE FLOW**: Use a dash (—) to interrupt yourself.
       `,
 
       [HumanizationMode.NATURAL]: `
@@ -356,16 +405,16 @@ export class PlagiarismService {
   async rewriteToOriginal(text: string, mode: LegacyHumanizationMode): Promise<LegacyRewriteResult> {
     // Map Legacy Mode -> New Mode
 
-    // NUCLEAR OPTION: If user selects AGGRESSIVE, we now use the 2-Pass hardHumanize workflow
+    // SMART/NUCLEAR OPTION: If user selects AGGRESSIVE, we now use the Smart Humanize workflow
     if (mode === LegacyHumanizationMode.AGGRESSIVE) {
-      const raw = await this.engine.hardHumanize(text);
+      const raw = await this.engine.smartHumanize(text);
       return {
         humanizedText: raw.humanizedText,
         originalAiProbability: raw.stats.originalAiScore,
         newAiProbability: raw.stats.predictedNewAiScore,
         readabilityScore: raw.stats.complexityScore,
         keyChanges: raw.changesMade,
-        toneAnalysis: `System 2 Applied: ${raw.stats.complexityScore}/100` // Visual indicator
+        toneAnalysis: `Smart Applied: ${raw.stats.complexityScore}/100` // Visual indicator
       };
     }
 
@@ -379,9 +428,10 @@ export class PlagiarismService {
       humanizedText: raw.humanizedText,
       originalAiProbability: raw.stats.originalAiScore,
       newAiProbability: raw.stats.predictedNewAiScore,
-      readabilityScore: raw.stats.complexityScore,
+      readabilityScore: raw.stats.complexityScore, // Map complexity to readability slot
       keyChanges: raw.changesMade,
       toneAnalysis: `Vocabulary Depth: ${raw.stats.complexityScore}/100`
     };
   }
 }
+```
