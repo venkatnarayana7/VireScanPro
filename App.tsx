@@ -11,7 +11,7 @@ import {
 import { storageService } from './services/storageService';
 import { cryptoService } from './services/cryptoService';
 import Gauge from './components/Gauge';
-import PricingModal from './components/PricingModal';
+
 import WritingReport from './components/WritingReport';
 import HistorySidebar from './components/HistorySidebar';
 import { AuthPage } from './components/AuthPages';
@@ -59,7 +59,7 @@ interface AppState {
   mode: HumanizationMode;
   rewriteResult: RewriteResult | null;
   isDarkMode: boolean;
-  isPricingOpen: boolean;
+
   isUserMenuOpen: boolean;
   history: ForensicHistoryItem[];
   showHistory: boolean;
@@ -77,7 +77,7 @@ const initialState: AppState = {
   mode: HumanizationMode.NATURAL,
   rewriteResult: null,
   isDarkMode: false,
-  isPricingOpen: false,
+
   isUserMenuOpen: false,
   history: [],
   showHistory: false,
@@ -429,10 +429,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 flex flex-col">
-      <PricingModal
-        isOpen={state.isPricingOpen}
-        onClose={() => updateState({ isPricingOpen: false })}
-      />
+
 
       {/* Header */}
       <AppHeader
@@ -446,7 +443,7 @@ const App: React.FC = () => {
         onToggleUserMenu={() =>
           updateState({ isUserMenuOpen: !state.isUserMenuOpen })
         }
-        onOpenPricing={() => updateState({ isPricingOpen: true })}
+
         onLogout={handleLogout}
       />
 
@@ -510,7 +507,7 @@ interface AppHeaderProps {
   onToggleDarkMode: () => void;
   onToggleHistory: () => void;
   onToggleUserMenu: () => void;
-  onOpenPricing: () => void;
+
   onLogout: () => void;
 }
 
@@ -523,7 +520,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onToggleDarkMode,
   onToggleHistory,
   onToggleUserMenu,
-  onOpenPricing,
+
   onLogout,
 }) => {
   return (
@@ -570,12 +567,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
         <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
 
-        <button
-          onClick={onOpenPricing}
-          className="hidden sm:flex bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-xs font-black shadow-lg items-center gap-2 uppercase tracking-widest"
-        >
-          <Sparkles size={16} /> Elite
-        </button>
+
 
         <UserMenu
           currentUser={currentUser}
@@ -1109,15 +1101,15 @@ const AnalysisResultPanel: React.FC<AnalysisResultPanelProps> = ({
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-10">
           <Gauge
-            value={result?.originalityScore ?? 0}
-            label="Originality"
-            color="#4f46e5"
+            value={result ? 100 - result.aiScore : 0}
+            label="Real Time Humanity"
+            color="#10b981"
             isDark={isDarkMode}
           />
           <Gauge
-            value={result ? 100 - result.aiScore : 0}
-            label="Humanity"
-            color="#10b981"
+            value={result?.aiScore ?? 0}
+            label="AI Percentage"
+            color="#ef4444"
             isDark={isDarkMode}
           />
         </div>

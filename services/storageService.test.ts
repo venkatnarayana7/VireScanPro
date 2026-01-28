@@ -29,6 +29,8 @@ describe('StorageService (Local Mode)', () => {
                 similarityScore: 0,
                 originalityScore: 100,
                 aiScore: 0,
+                wordCount: 150,
+                sources: [],
                 writingScores: {
                     plagiarism: false,
                     spelling: 100,
@@ -40,7 +42,12 @@ describe('StorageService (Local Mode)', () => {
                     additional: 100
                 },
                 highlights: [],
-                writingFeedback: {},
+                writingFeedback: {
+                    grammar: [],
+                    tone: "Neutral",
+                    readability: "Standard",
+                    aiMarkers: []
+                },
                 summary: 'Clean'
             },
             hash: 'abc-123-hash'
