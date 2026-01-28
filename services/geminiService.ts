@@ -288,8 +288,8 @@ export class TextIntelligenceService {
 export class PlagiarismService {
   private engine: TextIntelligenceService;
 
-  constructor() {
-    this.engine = new TextIntelligenceService();
+  constructor(config: { apiKey?: string } = {}) {
+    this.engine = new TextIntelligenceService(config);
   }
 
   async analyzeText(text: string): Promise<LegacyAnalysisResult> {
