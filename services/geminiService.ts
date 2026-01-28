@@ -29,7 +29,7 @@ const AnalysisSchema = z.object({
   }),
   flags: z.array(z.object({
     text: z.string(),
-    issue: z.enum(["AI_PATTERN", "REPETITION", "CLICHE", "LOGIC_FLAW", "GRAMMAR"]),
+    issue: z.string(), // Relaxed from strict enum to prevent AI "hallucination" crashes
     fix: z.string()
   })),
   strategicAdvice: z.string().describe("High-level advice to improve the text"),
